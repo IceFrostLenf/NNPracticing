@@ -1,0 +1,415 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.ConcurrencyVisualizer.Instrumentation;
+using Microsoft.ConcurrencyVisualizer;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Data.SqlClient;
+using System.Threading;
+using System.Data.Odbc;
+using System.Xml;
+
+namespace LenfNum {
+    public class LenfNum {
+        static Random r = new Random();
+        public short row, column;
+        public double[][] value;
+        public double[][] GetTransposed { get { return value.First().Select((x, y) => value.Select(z => z.ToArray()[y]).ToArray()).ToArray(); } }
+        #region Constructor
+        public double this[short row, short column] {
+            get {
+                return value[row][column];
+            }
+            set {
+                this.value[row][column] = value < 10e-9 ? 10e-9 : value;
+            }
+        }
+        public double[] this[short row] {
+            get {
+                return value[row];
+            }
+            set {
+                var count = value.Length;
+                this.value[row] = new double[count];
+                for(int i = 0; i < count; i++) {
+                    this.value[row][i] = value[i] < 10e-8 ? 10e-8 : value[i];
+                }
+            }
+        }
+        public LenfNum(short _row, short _column, double OriginValue) {
+            row = _row;
+            column = _column;
+            value = new double[row][];
+            for(int i = 0; i < row; i++) {
+                value[i] = Enumerable.Repeat(0d, column).ToArray();
+            }
+        }
+        public LenfNum(short _row, short _column) {
+            row = _row;
+            column = _column;
+            value = new double[row][];
+            for(int i = 0; i < row; i++) {
+                value[i] = Enumerable.Repeat(0d, column).ToArray();
+            }
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    value[i][j] = ((r.NextDouble() * 2) - 1);
+                }
+            }
+        }
+        public LenfNum(double[] _value) {
+            row = 1;
+            column = (short)_value.Count();
+            value = Enumerable.Repeat(_value, 1).ToArray();
+        }
+        public LenfNum(double[][] _value) {
+            row = (short)_value.Count();
+            column = (short)_value.First().Count();
+            value = _value;
+        }
+        public LenfNum(int position) {
+            var a = Enumerable.Repeat(0d, 10).ToArray();
+            a[position] = 1;
+            value = Enumerable.Repeat(a, 1).ToArray();
+        }
+        #endregion
+        #region Overriding
+        public static LenfNum operator +(LenfNum augend, LenfNum addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] + addend.value[i][j];
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator +(LenfNum augend, double addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] + addend;
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator -(LenfNum augend, LenfNum addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] - addend.value[i][j];
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator -(LenfNum augend, double addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] - addend;
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator *(LenfNum augend, LenfNum addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] * addend.value[i][j];
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator *(LenfNum augend, double addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] * addend;
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator /(LenfNum augend, LenfNum addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] / addend.value[i][j];
+                }
+            }
+            return d;
+        }
+        public static LenfNum operator /(LenfNum augend, double addend) {
+            short row = augend.row;
+            short column = augend.column;
+            var d = new LenfNum(row, column);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = augend.value[i][j] / addend;
+                }
+            }
+            return d;
+        }
+        public override string ToString() {
+            return String.Join("\r\n", value.Select(x => String.Join(", ", x.Select(y => y))));
+        }
+        #endregion
+        #region NormalFunction
+        public double Sum() {
+            var sum = 0d;
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    sum += value[i][j];
+                }
+            }
+            return sum;
+        }
+        public int Count() {
+            return row * column;
+        }
+        public double Max() {
+            var m = double.NegativeInfinity;
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    m = value[i][j] > m ? value[i][j] : m;
+                }
+            }
+            return m;
+        }
+        public LenfNum FuncForAll(Func<double, double> func) {
+            value = value.Select(x => x.Select(y => func(y)).ToArray()).ToArray();
+            return this;
+        }
+        public LenfNum FuncToAll(Func<double, double> func) {
+            var d = new LenfNum(row, column, 0d);
+            for(int i = 0; i < row; i++) {
+                for(int j = 0; j < column; j++) {
+                    d.value[i][j] = func(value[i][j]);
+                }
+            }
+            return d;
+        }
+        #endregion
+        public LenfNum Transposed() {
+            var sql = new LenfNum(column, row, 0d);
+            for(int i = 0; i < column; i++) {
+                for(int j = 0; j < row; j++) {
+                    sql.value[i][j] = value[j][i];
+                }
+            }
+            return sql;
+        }
+        public LenfNum Multiply(LenfNum Multier) {
+            if(Multier == null)
+                return this;
+            if(value[0].Count() != Multier.value.Count())
+                throw new Exception("Can't multiply AAAAA");
+
+            var c = (short)value.Count();
+            var d = (short)Multier.value[0].Count();
+            var e = value.First().Count();
+            var f = new LenfNum(c, d, 0d);
+
+            for(int i = 0; i < c; i++) {
+                for(int j = 0; j < d; j++) {
+                    for(int k = 0; k < e; k++) {
+                        f.value[i][j] += value[i][k] * Multier.value[k][j];
+                    }
+                }
+            }
+
+            return f;
+        }
+        public List<List<double>> Alllist() {
+            return value.Select(x => x.Select(y => y).ToList()).ToList();
+        }
+    }
+    public class LenfLayer {
+        public short Get, Give;
+        public double LearningRate;
+        public LenfNum Input, Weight, Bais, BeforeNormal, BeforeActive, AfterActive, Partial;
+
+        public Func<LenfLayer, LenfNum>[] NormalizeFunction = LenfNetworkFunction.NormalizeFunction.BatchNormalize;
+        public Func<LenfLayer, LenfNum>[] ActivityFunction = LenfNetworkFunction.ActivityFunction.Softmax;
+
+        public LenfLayer(short get, short give, double learningRate = 0.01, Func<LenfLayer, LenfNum>[] activityFunction = null, Func<LenfLayer, LenfNum>[] normalizeFunction = null) {
+            Get = get;
+            Give = give;
+            Weight = new LenfNum(get, give);
+            Bais = new LenfNum(1, give) / 10;
+            LearningRate = -learningRate;
+            NormalizeFunction = normalizeFunction ?? NormalizeFunction;
+            ActivityFunction = activityFunction ?? ActivityFunction;
+        }
+        public LenfLayer(LenfNum partial,short get,short give) {
+            Partial = partial;
+            Get = get;
+            Give = give;
+            NormalizeFunction = null;
+            ActivityFunction = null;
+        }
+        public LenfNum CalculateOutput(LenfNum input, bool islastLayer) {
+            Input = input;
+            BeforeNormal = (input.Multiply(Weight) + Bais);
+            if(!islastLayer) {
+                BeforeActive = NormalizeFunction[0](this);
+            } else {
+                BeforeActive = BeforeNormal;
+            }
+            AfterActive = ActivityFunction[0](this);
+            return AfterActive;
+        }
+    }
+    public class LenfNetwork {
+        public List<LenfLayer> Layers = new List<LenfLayer>();
+
+        public Func<LenfNum, LenfNum, LenfNum>[] CostFunction = LenfNetworkFunction.CostFunction.CrossEntropy;
+        public LenfNetwork(List<LenfLayer> layers, Func<LenfNum, LenfNum, LenfNum>[] costFunction = null) {
+            CostFunction = costFunction ?? CostFunction;
+
+            if(!layers.Select(x => x.Get).Skip(1).Zip(layers.Select(x => x.Give).Take(layers.Count - 1), (x, y) => x == y).All(x => x))
+                throw new Exception("Layer should be concat(?");
+
+            Layers.AddRange(layers);
+        }
+        #region FunctionAddLayer
+        //public void AddLayer(LenfLayer layer, short? firstInputCount = null) {
+        //    layer.Input = Layers.Count == 0 ? new LenfNum(1, firstInputCount ?? throw new Exception("First Layer should have input size")) : new LenfNum(Layers.Last().give,layer.get);
+        //    Layers.Add(layer);
+        //}
+        //public void AddRangeLayers(List<LenfLayer> layers, short? firstInputCount = null) {
+        //    foreach(var layer in layers) {
+        //        AddLayer(layer, firstInputCount);
+        //    }
+        //}
+        #endregion
+        public LenfNum Calculate(LenfNum CheckData) {
+            var finalOutput = GetFinalOutput(CheckData);
+            var totalCost = CostFunction[0](finalOutput, CheckData);
+            return finalOutput;
+        }
+        public void Train(LenfNum TrainData, LenfNum CheckData) {
+            var finalOutput = GetFinalOutput(TrainData);
+            var totalCost = CostFunction[0](finalOutput, CheckData);
+            ReFreshPartial(new LenfLayer(CostFunction[1](finalOutput, CheckData),1,Layers.Last().Give),CheckData);
+        }
+        public LenfNum GetFinalOutput(LenfNum TrainData) {
+            var lastlayer = Layers.Last();
+            foreach(var layer in Layers) {
+                TrainData = layer.CalculateOutput(TrainData, layer == lastlayer);
+            }
+            return TrainData;
+        }
+        public void ReFreshPartial(LenfLayer CostData, LenfNum CheckData) {
+            foreach(var layer in Layers.ToArray().Reverse()) {
+                //var a = CostData.Partial.Multiply(CostData.Weight?.Transposed() ?? null);
+                //var b = (layer.ActivityFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d));
+                //var c = (layer.NormalizeFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d));
+                //var d = a * b;
+                //var e = c * d;
+                //var f = CostData.Partial.Multiply(CostData.Weight?.Transposed() ?? null);
+                //var g = CostData.Partial.Multiply(CostData.Weight?.Transposed() ?? null) *
+                //    (layer.ActivityFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d));
+                //var gg = g / b;
+                //var h = CostData.Partial.Multiply(CostData.Weight?.Transposed() ?? null) *
+                //    (layer.ActivityFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d)) *
+                //    (layer.NormalizeFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d));
+                layer.Partial = CostData.Partial.Multiply(CostData.Weight?.Transposed() ?? null) *
+                    (layer.ActivityFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d)) *
+                    (layer.NormalizeFunction?[1].Invoke(layer) ?? new LenfNum(CostData.Get, CostData.Give, 1d));
+                CostData = layer;
+            }
+            foreach(var layer in Layers) {
+                layer.Bais += layer.Partial * layer.LearningRate;
+                var a = layer.Input.Transposed();
+                var b = layer.Partial;
+                var c = a.Multiply(b);
+                layer.Weight += layer.Input.Transposed().Multiply(layer.Partial) * layer.LearningRate;
+                int i = 0;
+            }
+        }
+    }
+    public static class LenfNetworkFunction {
+        public static class ActivityFunction {
+            public static Func<LenfLayer, LenfNum>[] Sigmoid = new Func<LenfLayer, LenfNum>[] {
+                (x) => {
+                    return x.BeforeActive.FuncToAll(x => 1 / (1 + Math.Exp(-x)));
+                },
+                (x) => {
+                    return x.AfterActive.FuncToAll(x => x * (1 - x));
+                }
+            };
+
+            public static Func<LenfLayer, LenfNum>[] Softmax = new Func<LenfLayer, LenfNum>[] {
+                (x) => {
+                    var total = x.BeforeActive.FuncToAll(x => Math.Exp(x)).Sum();
+                    return x.BeforeActive.FuncToAll(x => Math.Exp(x) / total);
+                },
+                (x) => {
+                    return x.AfterActive.FuncToAll(x => x - x * x);
+                }
+            };
+
+            public static Func<LenfLayer, LenfNum>[] ReLU = new Func<LenfLayer, LenfNum>[] {
+                (x) => {
+                    return x.BeforeActive.FuncToAll(x => x > 0 ? x : -0.8 * x);
+                },
+                (x) => {
+                    return x.AfterActive.FuncToAll(x => x > 0 ? 1 : -0.8);
+                }
+            };
+        }
+        public static class NormalizeFunction {
+            public static Func<LenfLayer, LenfNum>[] MinMaxNormalize = new Func<LenfLayer, LenfNum>[] {
+                (x) => {
+                    var max = x.BeforeNormal.Max();
+                    return x.BeforeNormal.FuncToAll(y => y / max);
+                },
+                (x) => {
+                    var max = x.BeforeNormal.Max();
+                    return x.BeforeNormal.FuncToAll(y => 1 / max);
+                }
+            };
+            public static Func<LenfLayer, LenfNum>[] BatchNormalize = new Func<LenfLayer, LenfNum>[] {
+                (x) => {
+                    var mean = x.BeforeNormal.Sum() / x.BeforeNormal.Count();
+                    var variance = Math.Sqrt(x.BeforeNormal.value.SelectMany(x => x.Select(x => Math.Pow(x - mean, 2))).Sum() / x.BeforeNormal.Count());
+                    return x.BeforeNormal.FuncToAll(x => (x - mean) / (variance + 1));
+                },
+                (x) => {
+                    var mean = x.BeforeNormal.Sum() / x.BeforeNormal.Count();
+                    var variance = Math.Sqrt(x.BeforeNormal.value.SelectMany(x => x.Select(x => Math.Pow(x - mean, 2))).Sum() / x.BeforeNormal.Count());
+                    return (x.BeforeActive * x.BeforeActive + 1 - x.BeforeNormal.Count()) / x.BeforeNormal.Count() / -variance;
+                }
+            };
+        }
+        public static class CostFunction {
+            public static Func<LenfNum, LenfNum, LenfNum>[] CrossEntropy = new Func<LenfNum, LenfNum, LenfNum>[] {
+                (x, y) => {
+                    return new LenfNum(x.value.Zip(y.value, (x, y) => x.Zip(y, (_x, _y) => Math.Log(_y == 0 ?( 1 - _x) : _x)).ToArray()).ToArray());
+                },
+                (x, y) => {
+                    return new LenfNum(x.value.Zip(y.value, (x, y) => x.Zip(y, (_x, _y) => 1 / (_y == 0 ?(1-_x ): _x)).ToArray()).ToArray());
+                }
+            };
+        }
+    }
+}
